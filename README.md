@@ -1,5 +1,6 @@
-# Nexus
-Distributed message broker
+#Pigeon
+Message broker for event-driven software systems.
 
-![Nexus](Pigeon.png)
+![Pigeon](Pigeon.png)
+
 
