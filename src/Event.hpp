@@ -5,9 +5,10 @@
 #define MAX_PAYLOAD 16384
 
 
-//Financial trading event
+//Base event struct
 struct Event{
 	uint64_t timeStamp;
 	char logMessage[MAX_LOG];
 	uint8_t payLoad[MAX_PAYLOAD];
 };
+
