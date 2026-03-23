@@ -26,14 +26,12 @@ struct FTE{
 
 void playTradingInterval(int sockFD, addrinfo* source, int intervalInSeconds){
 
-	FTE fullEvent;
+	Event fullEvent;
 	FTP tradingEvent;
 
-	FTE eventBuffer[1];
-
 	while(1){
-		int readBytes = recvfrom(sockFD, eventBuffer, sizeof(FTE), 0, source->ai_addr, &source->ai_addrlen);
-		printf("%s", eventBuffer[0].logMessage);
+		int readBytes = recvfrom(sockFD, &fullEvent, sizeof(Event), 0, source->ai_addr, &source->ai_addrlen);
+		printf("\n\nEventReader read: %s", fullEvent.logMessage);
 	}
 }
 
@@ -59,6 +57,7 @@ int main(int argc, char* argv[]){
 		printf("\n\nconnecting failed due to %s", strerror(errno));
 	}
 
+	playTradingInterval(sockFD, result, 10);
 
 
 }

@@ -1,3 +1,5 @@
+#include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <pthread.h>
@@ -7,6 +9,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <thread>
 #include "EventWriter.hpp"
 
 #define BACKLOG 10
@@ -27,28 +30,55 @@ struct connection{
 
 void* handleEventWriter(void* arg){
 	connection* conn = (connection*) arg;
-	printf("\n\nClient connected!");
+	printf("\n\nEventWriter connected!");
 
 	Event buff[1];
 
-	for(int i=0; i<NUMEVENTQUEUES;i++){
-		queues[i] = new std::queue<Event>();
-	}
-
 	int queueIndex=0;
+	int readBytes;
 	while(1){
-		int readBytes = recvfrom(conn->socket, buff, sizeof(Event), 0, (sockaddr*) conn->clientAddr, conn->clienatAddrLen);
-		printf("\n\n\nReceived: %s\n\n", buff[0].logMessage );
+		readBytes = recvfrom(conn->socket, buff, sizeof(Event), 0, (sockaddr*) conn->clientAddr, conn->clienatAddrLen);
+		printf("\n\n\nEventBroker received: %s\n\n", buff[0].logMessage);
 		queues[queueIndex]->push(buff[0]);
 		queueIndex++;
 		queueIndex%=NUMEVENTQUEUES;
 	}
 }
 
+void* handleEventReader(void* arg){
+	connection* conn = (connection*) arg;
+
+	printf("\n\nEventReader connected!");
+
+
+
+	
+	
+
+	// Event eventBuffer[1];
+	int bytesWritten;
+	Event e;
+
+	while(1){
+		if(!queues[0]->empty()){
+			e = queues[0]->front();
+			queues[0]->pop();
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+			bytesWritten = sendto(conn->socket, &e, sizeof(Event), 0, (sockaddr*) conn->clientAddr, *conn->clienatAddrLen);
+		}
+
+
+		//bytesWritten = sendto(conn->socket, &e, sizeof(e), 0, (sockaddr*) conn->clientAddr, *conn->clienatAddrLen);
+	}
+}
+
 int main(int argc, char* argv[]){
 
-
 	printf("\n\n\nGoldman in 18 months\n\n");
+
+	for(int i=0; i<NUMEVENTQUEUES;i++){
+		queues[i] = new std::queue<Event>();
+	}
 
 	addrinfo hints;
 	addrinfo* result;
@@ -71,38 +101,61 @@ int main(int argc, char* argv[]){
 	if(listen(sockfd,BACKLOG)!=0){
 		printf("\n\nFailed listening!");
 	}
-
 	
 	int connFD;
 
 
 
+
+
+
 	struct sockaddr_storage eventWriterAddr;
 	socklen_t eventWriterAddrLen = sizeof eventWriterAddr;
-	
-	connFD = accept(sockfd, (struct sockaddr*) &eventWriterAddr, &eventWriterAddrLen);
+	int connFD2 = accept(sockfd, (struct sockaddr*) &eventWriterAddr, &eventWriterAddrLen);
 
 	connection writer = {
-		connFD,
+		connFD2,
 		&eventWriterAddr,
 		&eventWriterAddrLen
 	};
 
-	pthread_t tid;
-	pthread_create(&tid, NULL, handleEventWriter, &writer);
+	pthread_t tid1;
+	pthread_create(&tid1, NULL, handleEventWriter, &writer);
+
+
+
+
+
 
 	struct sockaddr_storage eventReaderAddr;
 	socklen_t eventReaderAddrLen = sizeof eventReaderAddr;
-	
-	connFD = accept(sockfd, (struct sockaddr*) &eventReaderAddr, &eventReaderAddrLen);
+
+	int connFD1 = accept(sockfd, (struct sockaddr*) &eventReaderAddr, &eventReaderAddrLen);
 
 	connection reader = {
-		connFD,
+		connFD1,
 		&eventReaderAddr,
-		&eventWriterAddrLen
+		&eventReaderAddrLen
 	};
 
-	//pthread_create(&tid, NULL, handleEventReader, &reader);
+	pthread_t tid2;
+	pthread_create(&tid2, NULL, handleEventReader, &reader);
+
+	pthread_join(tid1, NULL);
+	pthread_join(tid2, NULL);
+
+
+
+
+
+
+
+
+
+
+
+	
+
 
 	
 
