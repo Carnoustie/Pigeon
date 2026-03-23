@@ -55,7 +55,7 @@ void playTradingInterval(int recvSockFD, addrinfo* recv, int durationInSeconds){
 	uint64_t t = time(nullptr);
 	std::time_t tt = (std::time_t) t;
 	int bytesWritten = strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", std::localtime(&tt));
-	bytesWritten = sprintf(logString, "\n\nAt %s, %s purchased %d units of %s from %s at price %f", timeString, tradingEvent.buyer, tradingEvent.numUnits, tradingEvent.ticker, tradingEvent.seller, tradingEvent.price);
+	bytesWritten = sprintf(logString, "\n\nAt %s, %s purchased %d units of %s from %s at final execution price $%f", timeString, tradingEvent.buyer, tradingEvent.numUnits, tradingEvent.ticker, tradingEvent.seller, tradingEvent.price);
 
 
 
@@ -74,7 +74,7 @@ void playTradingInterval(int recvSockFD, addrinfo* recv, int durationInSeconds){
 		t = time(nullptr);
 		tt = (std::time_t) t;
 		bytesWritten = strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", std::localtime(&tt));
-		bytesWritten = sprintf(logString, "\n\nAt %s, %s purchased %d units of %s from %s at price %f", timeString, tradingEvent.buyer, tradingEvent.numUnits, tradingEvent.ticker, tradingEvent.seller, tradingEvent.price);
+		bytesWritten = sprintf(logString, "\n\nAt %s, %s purchased %d units of %s from %s at final execution price $%f", timeString, tradingEvent.buyer, tradingEvent.numUnits, tradingEvent.ticker, tradingEvent.seller, tradingEvent.price);
 		tradingEvent.price = tradingEvent.price + gaussian(randomEngine);
 		tradingEvent.numUnits = uniformSampler(randomEngine);
 		fullEvent.timestamp = t;
