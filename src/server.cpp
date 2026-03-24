@@ -23,11 +23,12 @@ int main(int argc, char* argv[]){
 
 
 	EventBroker evtBrkr = EventBroker(1,1);
-	evtBrkr.AccptEvtWriters();
-	evtBrkr.AccptEvtReaders();
 
-	pthread_join(evtBrkr.wrtrConns[evtBrkr.connectedWrtrs].connThread,NULL);
-	pthread_join(evtBrkr.rdrConns[evtBrkr.connectedRdrs].connThread, NULL);
+	evtBrkr.AcceptEventWriters();
+	evtBrkr.AcceptEventReaders();
+
+	pthread_join(evtBrkr.evtWrtrsBdry.rootThread,NULL);
+	pthread_join(evtBrkr.evtRdrsBdry.rootThread, NULL);
 
 	// pthread_join(tid1, NULL);
 	// pthread_join(tid2, NULL);

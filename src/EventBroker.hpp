@@ -1,4 +1,3 @@
-
 #include <algorithm>
 #include <cstring>
 #include <netdb.h>
@@ -27,63 +26,65 @@ struct connHandle{
 };
 
 struct wrtrsPool{
+	ServerTCPsocket TCPsock;
 	connHandle* conns;
+	int maxEventWriterConnections;
 	pthread_t rootThread;
+	int connectedWriters;
+	std::queue<Event>* evtQueues;
+	int numEvtQueues;
 };
 
 struct rdrsPool{
+	ServerTCPsocket TCPsock;
 	connHandle* conns;
+	int maxEventReaderConnections;
 	pthread_t rootThread;
+	int connectedReaders;
+	std::queue<Event>* evtQueues;
+	int numEvtQueues;
 };
-
-
 
 class EventBroker{
 	private:
-		int maxEventWriterConnections;
-		int maxEventReaderConnections;
-		ServerTCPsocket evtWrtrSock;
-		ServerTCPsocket evtRdrSock;
 		const char* evtWrtrsPort = "8080";
 		const char* evtRdrsPort = "8081";
-		int numEvtQueues;
-		std::queue<Event>* evtQueues;
 	
 	public:
-		connHandle* wrtrConns;
-		connHandle* rdrConns;
-		int connectedWrtrs;
-		int connectedRdrs;
+		wrtrsPool evtWrtrsBdry;
+		wrtrsPool evtRdrsBdry;
+		int numEvtQueues;
+		std::queue<Event>* evtQueues;
+		
 		//default constructor
-		EventBroker(): 
-			maxEventWriterConnections{0}, 
-			maxEventReaderConnections{0}, 
-			evtWrtrSock{}, 
-			evtRdrSock{}, 
+		EventBroker():
+			evtWrtrsBdry{},
+			evtRdrsBdry{},
 			evtWrtrsPort{nullptr},
 			evtRdrsPort{nullptr},
-			wrtrConns{nullptr},
-			rdrConns{nullptr},
-			connectedWrtrs{0},
-			connectedRdrs{0},
 			numEvtQueues{0},
 			evtQueues{nullptr}
 		 {}
 
 		//constructor
 		EventBroker(int maxWriters, int maxReaders){
-			maxEventWriterConnections = maxWriters;
-			maxEventReaderConnections = maxReaders;
-			evtWrtrSock = ServerTCPsocket(evtWrtrsPort, maxWriters);
-			evtRdrSock = ServerTCPsocket(evtRdrsPort, maxReaders);
-			wrtrConns = new connHandle[maxWriters];
-			rdrConns = new connHandle[maxReaders];
-			connectedWrtrs = 0;
-			connectedRdrs = 0;
-			numEvtQueues = std::max(maxEventWriterConnections, maxEventReaderConnections);
+			numEvtQueues = std::max(maxWriters, maxReaders);
 			evtQueues = new std::queue<Event>[numEvtQueues];
+			
+			evtWrtrsBdry.TCPsock = ServerTCPsocket(evtWrtrsPort, maxWriters);
+			evtWrtrsBdry.conns = new connHandle[maxWriters];
+			evtWrtrsBdry.maxEventWriterConnections = maxWriters;
+			evtWrtrsBdry.connectedWriters = 0;
+			evtWrtrsBdry.evtQueues = evtQueues;
+			evtWrtrsBdry.numEvtQueues = numEvtQueues;
+			
+			evtRdrsBdry.TCPsock = ServerTCPsocket(evtRdrsPort, maxWriters);
+			evtRdrsBdry.conns = new connHandle[maxWriters];
+			evtRdrsBdry.maxEventWriterConnections = maxWriters;
+			evtRdrsBdry.connectedWriters = 0;
+			evtRdrsBdry.evtQueues = evtQueues;
+			evtRdrsBdry.numEvtQueues = numEvtQueues;
 		}
-
 
 		static void* handleEventWriter(void* arg){
 			conn* c = (conn*) arg;
@@ -100,19 +101,20 @@ class EventBroker{
 			}
 		}
 
-		void AccptEvtWriters(){
+		static void* AccptEvtWriters(void* arg){
+			wrtrsPool* connPool = (wrtrsPool*) arg;
 			int connSockFd;
 			while(1){
-				while(connectedWrtrs<=maxEventWriterConnections){
+				while(connPool->connectedWriters<=connPool->maxEventWriterConnections){
 					struct sockaddr_storage clientAddr;
 					socklen_t clientAddrLen = (socklen_t) sizeof(clientAddr);
-					if((connSockFd=accept(evtWrtrSock.sockFd, (struct sockaddr*) &clientAddr, &clientAddrLen))<0){
+					if((connSockFd=accept(connPool->TCPsock.sockFd, (struct sockaddr*) &clientAddr, &clientAddrLen))<0){
 						std::string msg = (std::string) strerror(errno);
 						throw std::runtime_error(msg);
 					}else{
 						conn c =  {
-							&evtQueues[connectedWrtrs],
-							connectedWrtrs,
+							&(connPool->evtQueues[connPool->connectedWriters]),
+							connPool->connectedWriters,
 							connSockFd,
 							&clientAddr,
 							&clientAddrLen
@@ -122,20 +124,22 @@ class EventBroker{
 						connHandle ch = {
 							&c,
 							tid,
-							connectedWrtrs
+							connPool->connectedWriters
 						};
-						connectedWrtrs++;
+						connPool->connectedWriters++;
 					}
 				}
 			}
 		}
 
-
+		void AcceptEventWriters(){
+			pthread_create(&evtWrtrsBdry.rootThread, NULL, AccptEvtWriters, &evtWrtrsBdry);
+		}
 
 		static void* handleEventReader(void* arg){
 			conn* c = (conn*) arg;
 
-			printf("\n\nEventReader connected!");			
+			printf("\n\nEventReader connected!");
 
 			// Event eventBuffer[1];
 			int bytesWritten;
@@ -154,36 +158,38 @@ class EventBroker{
 			}
 		}
 
-		void AccptEvtReaders(){
+		static void* AccptEvtReaders(void* arg){
+			rdrsPool* connPool = (rdrsPool*) arg;
 			int connSockFd;
 			while(1){
-				while(connectedWrtrs<=maxEventReaderConnections){
+				while(connPool->connectedReaders<=connPool->maxEventReaderConnections){
 					struct sockaddr_storage clientAddr;
 					socklen_t clientAddrLen = (socklen_t) sizeof(clientAddr);
-					if((connSockFd=accept(evtRdrSock.sockFd, (struct sockaddr*) &clientAddr, &clientAddrLen))<0){
+					if((connSockFd=accept(connPool->TCPsock.sockFd, (struct sockaddr*) &clientAddr, &clientAddrLen))<0){
 						std::string msg = (std::string) strerror(errno);
 						throw std::runtime_error(msg);
 					}else{
 						conn c =  {
-							&evtQueues[connectedRdrs],
-							connectedRdrs,
+							&(connPool->evtQueues[connPool->connectedReaders]),
+							connPool->connectedReaders,
 							connSockFd,
 							&clientAddr,
 							&clientAddrLen
 						};
 						pthread_t tid;
-						if(pthread_create(&tid, NULL, handleEventReader, &c)!=0){
-							throw std::runtime_error("reader handler failed");
-						}
-						
+						pthread_create(&tid, NULL, handleEventReader, &c);
 						connHandle ch = {
 							&c,
 							tid,
-							connectedRdrs
+							connPool->connectedReaders
 						};
-						connectedRdrs++;
+						connPool->connectedReaders++;
 					}
 				}
 			}
+		}
+
+		void AcceptEventReaders(){
+			if(pthread_create(&evtRdrsBdry.rootThread, NULL, AccptEvtReaders, &evtRdrsBdry)<0);
 		}
 };
