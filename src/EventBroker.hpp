@@ -1,15 +1,33 @@
 
+#include <algorithm>
+#include <cstring>
 #include <netdb.h>
 #include <pthread.h>
+#include <stdexcept>
+#include <sys/socket.h>
 #include <unordered_map>
 #include "TCPsocket.hpp"
+#include "Event.hpp"
+#include <queue>
+
 
 struct conn{
-	int connSockFd;
-	addrinfo* connAddr;
+	std::queue<Event>* q;
+	int qId;
+	int sock;
+	sockaddr_storage* clientAddr;
+	socklen_t* clientAddrLen;
+};
+
+struct connHandle{
+	conn* connection;
 	pthread_t connThread;
 	int connId;
 };
+
+
+
+
 
 class EventBroker{
 	private:
@@ -21,8 +39,29 @@ class EventBroker{
 		const char* evtRdrsPort = "8081";
 		conn* wrtrConns;
 		conn* rdrConns;
+		int connectedWrtrs;
+		int connectedRdrs;
+		int numEvtQueues;
+		std::queue<Event>* evtQueues;
 	
 	public:
+		//default constructor
+		EventBroker(): 
+			maxEventWriterConnections{0}, 
+			maxEventReaderConnections{0}, 
+			evtWrtrSock{}, 
+			evtRdrSock{}, 
+			evtWrtrsPort{nullptr},
+			evtRdrsPort{nullptr},
+			wrtrConns{nullptr},
+			rdrConns{nullptr},
+			connectedWrtrs{0},
+			connectedRdrs{0},
+			numEvtQueues{0},
+			evtQueues{nullptr}
+		 {}
+
+		//constructor
 		EventBroker(int maxWriters, int maxReaders){
 			maxEventWriterConnections = maxWriters;
 			maxEventReaderConnections = maxReaders;
@@ -30,6 +69,54 @@ class EventBroker{
 			evtRdrSock = ServerTCPsocket(evtRdrsPort, maxReaders);
 			wrtrConns = new conn[maxWriters];
 			rdrConns = new conn[maxReaders];
+			connectedWrtrs = 0;
+			connectedRdrs = 0;
+			numEvtQueues = std::max(maxEventWriterConnections, maxEventReaderConnections);
+			evtQueues = new std::queue<Event>[numEvtQueues];
 		}
-	
+
+
+		static void* handleEventWriter(void* arg){
+			conn* c = (conn*) arg;
+			printf("\n\nEventWriter connected!");
+
+			Event buff[1];
+
+			int queueIndex=0;
+			int readBytes;
+			while(1){
+				readBytes = recvfrom(c->sock, buff, sizeof(Event), 0, (sockaddr*) c->clientAddr, c->clientAddrLen);
+				printf("\n\n\nEventBroker received: %s\n\n", buff[0].logMessage);
+				c->q->push(buff[0]);
+			}
+		}
+
+		void AccptEvtWriters(){
+			int connSockFd;
+			while(1){
+				while(connectedWrtrs<=maxEventWriterConnections){
+					struct sockaddr_storage clientAddr;
+					socklen_t clientAddrLen = (socklen_t) sizeof(clientAddr);
+					if((connSockFd=accept(evtWrtrSock.sockFd, (struct sockaddr*) &clientAddr, &clientAddrLen))<0){
+						std::string msg = (std::string) strerror(errno);
+						throw std::runtime_error(msg);
+					}else{
+						conn c =  {
+							&evtQueues[connectedWrtrs],
+							connectedWrtrs,
+							connSockFd,
+							&clientAddr,
+							&clientAddrLen
+						};
+						pthread_t tid;
+						pthread_create(&tid, NULL, handleEventWriter, &c);
+						connHandle ch = {
+							&c,
+							tid,
+							connectedWrtrs
+						};
+					}
+				}
+			}
+		}
 };

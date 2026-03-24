@@ -10,9 +10,9 @@
 class ClientTCPsocket{
 
 	private:
+	public:
 		addrinfo* targetAddr = nullptr;
 		int sockFd = -1;
-	public:
 		ClientTCPsocket(const ClientTCPsocket&) = delete;
 		ClientTCPsocket& operator=(const ClientTCPsocket&) = delete;
 
@@ -65,9 +65,9 @@ class ClientTCPsocket{
 class ServerTCPsocket{
 
 	private:
+	public:
 		addrinfo* serverAddr = nullptr;
 		int sockFd = -1;
-	public:
 		ServerTCPsocket(const ServerTCPsocket&) = delete;
 		ServerTCPsocket& operator=(const ServerTCPsocket&) = delete;
 
