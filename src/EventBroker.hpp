@@ -9,7 +9,8 @@
 #include "TCPsocket.hpp"
 #include "Event.hpp"
 #include <queue>
-
+#include <chrono>
+#include <thread>
 
 struct conn{
 	std::queue<Event>* q;
@@ -25,7 +26,15 @@ struct connHandle{
 	int connId;
 };
 
+struct wrtrsPool{
+	connHandle* conns;
+	pthread_t rootThread;
+};
 
+struct rdrsPool{
+	connHandle* conns;
+	pthread_t rootThread;
+};
 
 
 
@@ -37,14 +46,14 @@ class EventBroker{
 		ServerTCPsocket evtRdrSock;
 		const char* evtWrtrsPort = "8080";
 		const char* evtRdrsPort = "8081";
-		conn* wrtrConns;
-		conn* rdrConns;
-		int connectedWrtrs;
-		int connectedRdrs;
 		int numEvtQueues;
 		std::queue<Event>* evtQueues;
 	
 	public:
+		connHandle* wrtrConns;
+		connHandle* rdrConns;
+		int connectedWrtrs;
+		int connectedRdrs;
 		//default constructor
 		EventBroker(): 
 			maxEventWriterConnections{0}, 
@@ -67,8 +76,8 @@ class EventBroker{
 			maxEventReaderConnections = maxReaders;
 			evtWrtrSock = ServerTCPsocket(evtWrtrsPort, maxWriters);
 			evtRdrSock = ServerTCPsocket(evtRdrsPort, maxReaders);
-			wrtrConns = new conn[maxWriters];
-			rdrConns = new conn[maxReaders];
+			wrtrConns = new connHandle[maxWriters];
+			rdrConns = new connHandle[maxReaders];
 			connectedWrtrs = 0;
 			connectedRdrs = 0;
 			numEvtQueues = std::max(maxEventWriterConnections, maxEventReaderConnections);
@@ -115,6 +124,64 @@ class EventBroker{
 							tid,
 							connectedWrtrs
 						};
+						connectedWrtrs++;
+					}
+				}
+			}
+		}
+
+
+
+		static void* handleEventReader(void* arg){
+			conn* c = (conn*) arg;
+
+			printf("\n\nEventReader connected!");			
+
+			// Event eventBuffer[1];
+			int bytesWritten;
+			Event e;
+
+			while(1){
+				if(!c->q->empty()){
+					e = c->q->front();
+					c->q->pop();
+					std::this_thread::sleep_for(std::chrono::seconds(1));
+					bytesWritten = sendto(c->sock, &e, sizeof(Event), 0, (sockaddr*) c->clientAddr, *c->clientAddrLen);
+				}
+
+
+				//bytesWritten = sendto(conn->socket, &e, sizeof(e), 0, (sockaddr*) conn->clientAddr, *conn->clienatAddrLen);
+			}
+		}
+
+		void AccptEvtReaders(){
+			int connSockFd;
+			while(1){
+				while(connectedWrtrs<=maxEventReaderConnections){
+					struct sockaddr_storage clientAddr;
+					socklen_t clientAddrLen = (socklen_t) sizeof(clientAddr);
+					if((connSockFd=accept(evtRdrSock.sockFd, (struct sockaddr*) &clientAddr, &clientAddrLen))<0){
+						std::string msg = (std::string) strerror(errno);
+						throw std::runtime_error(msg);
+					}else{
+						conn c =  {
+							&evtQueues[connectedRdrs],
+							connectedRdrs,
+							connSockFd,
+							&clientAddr,
+							&clientAddrLen
+						};
+						pthread_t tid;
+						if(pthread_create(&tid, NULL, handleEventReader, &c)!=0){
+							throw std::runtime_error("reader handler failed");
+						}
+						
+						connHandle ch = {
+							&c,
+							tid,
+							connectedRdrs
+						};
+						connectedRdrs++;
 					}
 				}
 			}

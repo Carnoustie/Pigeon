@@ -47,7 +47,7 @@ int main(int argc, char* argv[]){
 	hints.ai_protocol = IPPROTO_TCP;
 	hints.ai_socktype = SOCK_STREAM;
 
-	if(getaddrinfo("localhost", "8080", &hints, &result)!=0){
+	if(getaddrinfo("localhost", "8081", &hints, &result)!=0){
 		printf("\n\ngetting address failed due to %s", strerror(errno));
 	}
 
