@@ -4,17 +4,13 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include <locale>
 #include <random>
-#include <string>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <thread>
 #include "Event.hpp"
-
-
 
 struct FTP{
 	char buyer[256];
@@ -56,8 +52,6 @@ void playTradingInterval(int recvSockFD, addrinfo* recv, int durationInSeconds){
 	std::time_t tt = (std::time_t) t;
 	int bytesWritten = strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", std::localtime(&tt));
 	bytesWritten = sprintf(logString, "\n\nAt %s, %s purchased %d units of %s from %s at final execution price $%f", timeString, tradingEvent.buyer, tradingEvent.numUnits, tradingEvent.ticker, tradingEvent.seller, tradingEvent.price);
-
-
 
 	FTE fullEvent;
 	fullEvent.timestamp = t;

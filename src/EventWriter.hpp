@@ -1,4 +1,3 @@
-
 #include <chrono>
 #include <cstdint>
 #include <ctime>
@@ -8,9 +7,7 @@
 #include <sys/socket.h>
 
 class EventWriter{
-
 	private:
-
 	public:
 		virtual void writeEvent(Event e) = 0;
 		EventWriter(){
