@@ -95,7 +95,6 @@ class ServerTCPsocket{
 			}
 		}
 
-
 		ServerTCPsocket(ServerTCPsocket&& s){
 			serverAddr = s.serverAddr;
 			s.serverAddr = nullptr;

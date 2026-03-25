@@ -4,7 +4,6 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include <iostream>
 #include <random>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -12,22 +11,7 @@
 #include <netinet/in.h>
 #include <thread>
 #include "EventWriter.hpp"
-
-//Financial Trading Event Payload
-struct FTP{
-	char buyer[256];
-	char seller[256];
-	char ticker[256];
-	int numUnits;
-	double price;
-};
-
-//Financial Trading Event
-struct FTE{
-	uint64_t timestamp;
-	char logMessage[4096];
-	FTP payload;
-};
+#include "FinancialTradingEvent.hpp"
 
 std::mt19937 randomEngine(19);
 std::normal_distribution<double> gaussian(0,1);
@@ -52,7 +36,6 @@ void playTradingInterval(EventWriter& ew){
 	Event fullEvent;
 	fullEvent.timeStamp = t;
 	memcpy(fullEvent.logMessage, &logString, sizeof(logString));
-	// fullEvent.payLoad = tradingEvent;
 	memcpy(fullEvent.payLoad, &tradingEvent, sizeof(FTP));
 	int bytesSent;
 	while(1){
@@ -65,16 +48,12 @@ void playTradingInterval(EventWriter& ew){
 		tradingEvent.numUnits = uniformSampler(randomEngine);
 		fullEvent.timeStamp = t;
 		memcpy(fullEvent.logMessage, &logString, sizeof(logString));
-		// fullEvent.payLoad = tradingEvent;
 		memcpy(fullEvent.payLoad, &tradingEvent, sizeof(FTP));
-		// printf("\n\nmsg: %s", fullEvent.logMessage);
 		ew.writeEvent(fullEvent);
-		//bytesSent = sendto(recvSockFD, &fullEvent, sizeof(fullEvent), 0, recv->ai_addr, recv->ai_addrlen);
 	}
 }
 
 int main(int argc, char* argv[]){
-	// ClientTCPsocket socket("localhost", "8080");
 	EventWriter ew("localhost", "8080");
 	EventCategory ECS[3] = {"FTE", "WE", "CBA"};
 	ew.announceEventCategories(3, ECS);

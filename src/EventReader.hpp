@@ -8,8 +8,6 @@
 #include <sys/socket.h>
 #include "TCPsocket.hpp"
 
-typedef char EventCategory[32];
-
 class EventReader{
 	private:
 	public:
@@ -26,7 +24,6 @@ class EventReader{
 		}
 
 		void subscribeToEventCategories(int numEventCategories, EventCategory EventCategories[10]){
-			printf("\n\nSanity check cat: %s", EventCategories[1]);
 			int btsSent = sendto(connection.sockFd, &numEventCategories, sizeof(int), 0, connection.targetAddr->ai_addr, connection.targetAddr->ai_addrlen);
 			btsSent = sendto(connection.sockFd, EventCategories, sizeof(EventCategory[numEventCategories]), 0, connection.targetAddr->ai_addr, connection.targetAddr->ai_addrlen);
 		}
