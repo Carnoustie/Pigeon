@@ -1,20 +1,29 @@
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
+#include <iostream>
+#include <iterator>
 #include <memory>
 #include <netdb.h>
 #include <pthread.h>
 #include <stdexcept>
+#include <string>
 #include <sys/socket.h>
 #include "TCPsocket.hpp"
 #include "Event.hpp"
 #include <queue>
 #include <chrono>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+typedef std::string EvtCat;
+typedef char EvtCatRawBytes[32];
+
 struct conn{
-	std::queue<Event>* q;
+	std::vector<std::queue<Event>*> wrtrQueues;
+	//std::queue<Event>* q;
 	int qId;
 	int sock;
 	sockaddr_storage* clientAddr;
@@ -33,7 +42,8 @@ struct wrtrsPool{
 	int maxEventWriterConnections;
 	pthread_t rootThread;
 	int connectedWriters;
-	std::shared_ptr<std::vector<std::queue<Event>>> evtQueues;
+	// std::shared_ptr<std::vector<std::queue<Event>>> evtQueues;
+	std::shared_ptr<std::unordered_map<EvtCat, std::queue<Event>>> evtQueues;
 	int numEvtQueues;
 };
 
@@ -43,9 +53,11 @@ struct rdrsPool{
 	int maxEventReaderConnections;
 	pthread_t rootThread;
 	int connectedReaders;
-	std::shared_ptr<std::vector<std::queue<Event>>> evtQueues;
+	std::shared_ptr<std::unordered_map<EvtCat, std::queue<Event>>> evtQueues;
 	int numEvtQueues;
 };
+
+
 
 class EventBroker{
 	private:
@@ -56,7 +68,8 @@ class EventBroker{
 		wrtrsPool evtWrtrsBdry;
 		rdrsPool evtRdrsBdry;
 		int numEvtQueues;
-		std::shared_ptr<std::vector<std::queue<Event>>> evtQueues;
+		std::shared_ptr<std::unordered_map< EvtCat,std::queue<Event>>> evtQueues;
+		// std::shared_ptr<std::vector<std::queue<Event>>> evtQueues;
 		
 		//default constructor
 		EventBroker():
@@ -71,7 +84,8 @@ class EventBroker{
 		//constructor
 		EventBroker(int maxWriters, int maxReaders){
 			numEvtQueues = std::max(maxWriters, maxReaders);
-			evtQueues =  std::make_shared<std::vector<std::queue<Event>>>(std::vector<std::queue<Event>>(numEvtQueues));
+			// evtQueues =  std::make_shared<std::vector<std::queue<Event>>>(std::vector<std::queue<Event>>(numEvtQueues));
+			evtQueues =  std::make_shared<std::unordered_map<EvtCat, std::queue<Event>>>(); 
 
 			evtWrtrsBdry.TCPsock = ServerTCPsocket(evtWrtrsPort, maxWriters);
 			evtWrtrsBdry.connHandles = std::vector<connHandle>(maxWriters);
@@ -108,9 +122,13 @@ class EventBroker{
 			Event e;
 			int readBytes;
 			while(1){
+				// readBytes = recvfrom(c->sock, &e, sizeof(EventCategory), 0, (sockaddr*) c->clientAddr, c->clientAddrLen);
 				readBytes = recvfrom(c->sock, &e, sizeof(Event), 0, (sockaddr*) c->clientAddr, c->clientAddrLen);
 				printf("\n\n\nEventBroker received: %s\n\n", e.logMessage);
-				c->q->push(e);
+				for(std::queue<Event>* q: c->wrtrQueues){
+					q->push(e);
+				}
+				// c->q->push(e);
 			}
 		}
 
@@ -125,8 +143,26 @@ class EventBroker{
 						std::string msg = (std::string) strerror(errno);
 						throw std::runtime_error(msg);
 					}else{
+
+						int numCats;
+						int sizeOfIncomingCatStrings = sizeof(EvtCat)*numCats;
+						int readCatBytes = recvfrom(connSockFd, &numCats, sizeof(int), 0, (sockaddr*) &clientAddr, &clientAddrLen);
+						EvtCatRawBytes tcpEventCats[numCats];
+						readCatBytes = recvfrom(connSockFd, &tcpEventCats, sizeof(tcpEventCats), 0, (sockaddr*) &clientAddr, &clientAddrLen);
+
+						std::vector<std::queue<Event>*> EventVector;
+
+						for(int i=0; i<numCats; i++){
+							// connPool->evtQueues->insert(  { EvtCats[i], std::queue<Event> } );
+							std::string strCategory = (std::string) tcpEventCats[i];
+							(*connPool->evtQueues)[strCategory] = std::queue<Event>();
+							EventVector.push_back(&(*connPool->evtQueues)[strCategory]);
+							std::cout << "\n\nevtcat: " << strCategory;
+						}
+
+
 						conn c =  {
-							&(*connPool->evtQueues)[connPool->connectedWriters],
+							EventVector,
 							connPool->connectedWriters,
 							connSockFd,
 							&clientAddr,
@@ -159,12 +195,23 @@ class EventBroker{
 			int bytesWritten;
 			Event e;
 			while(1){
-				if(!c->q->empty()){
-					e = c->q->front();
-					c->q->pop();
+				
+				for(std::queue<Event>* q: c->wrtrQueues){
 					std::this_thread::sleep_for(std::chrono::seconds(1));
-					bytesWritten = sendto(c->sock, &e, sizeof(Event), 0, (sockaddr*) c->clientAddr, *c->clientAddrLen);
+					if(!q->empty()){
+						e = q->front();
+						q->pop();
+						std::this_thread::sleep_for(std::chrono::seconds(1));
+						bytesWritten = sendto(c->sock, &e, sizeof(Event), 0, (sockaddr*) c->clientAddr, *c->clientAddrLen);
+					}
 				}
+
+				// if(!c->q->empty()){
+				// 	e = c->q->front();
+				// 	c->q->pop();
+				// 	std::this_thread::sleep_for(std::chrono::seconds(1));
+				// 	bytesWritten = sendto(c->sock, &e, sizeof(Event), 0, (sockaddr*) c->clientAddr, *c->clientAddrLen);
+				// }
 			}
 		}
 
@@ -179,13 +226,35 @@ class EventBroker{
 						std::string msg = (std::string) strerror(errno);
 						throw std::runtime_error(msg);
 					}else{
+						int numCats;
+						int sizeOfIncomingCatStrings = sizeof(EvtCat)*numCats;
+						int readCatBytes = recvfrom(connSockFd, &numCats, sizeof(int), 0, (sockaddr*) &clientAddr, &clientAddrLen);
+						EvtCatRawBytes tcpEventCats[numCats];
+						readCatBytes = recvfrom(connSockFd, &tcpEventCats, sizeof(tcpEventCats), 0, (sockaddr*) &clientAddr, &clientAddrLen);
+
+						std::vector<std::queue<Event>*> EventVector;
+
+						for(int i=0; i<numCats; i++){
+							// connPool->evtQueues->insert(  { EvtCats[i], std::queue<Event> } );
+							std::string strCategory = (std::string) tcpEventCats[i];
+							(*connPool->evtQueues)[strCategory] = std::queue<Event>();
+							EventVector.push_back(&(*connPool->evtQueues)[strCategory]);
+							std::cout << "\n\nevtcat: " << strCategory;
+						}
+
+
+
+
 						conn c =  {
-							&(*connPool->evtQueues)[connPool->connectedReaders],
+							EventVector,
 							connPool->connectedReaders,
 							connSockFd,
 							&clientAddr,
 							&clientAddrLen
 						};
+
+
+
 						pthread_t tid;
 						std::unique_ptr<conn> cPtr{new conn{c}};
 						pthread_create(&tid, NULL, handleEventReader, cPtr.get());

@@ -1,4 +1,3 @@
-#include "Event.hpp"
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -6,8 +5,9 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include "EventReader.hpp"
 
-
+//Financial Trading Event Payload
 struct FTP{
 	char buyer[256];
 	char seller[256];
@@ -24,40 +24,22 @@ struct FTE{
 };
 
 
-void playTradingInterval(int sockFD, addrinfo* source, int intervalInSeconds){
+typedef char EventCategory[32];
 
+void playTradingInterval(EventReader& er, int intervalInSeconds){
 	Event fullEvent;
 	FTP tradingEvent;
 
 	while(1){
-		int readBytes = recvfrom(sockFD, &fullEvent, sizeof(Event), 0, source->ai_addr, &source->ai_addrlen);
+		// int readBytes = recvfrom(er.connection.sockFd, &fullEvent, sizeof(Event), 0, er.connection.targetAddr->ai_addr , &er.connection.targetAddr->ai_addrlen);
+		er.readEvent();
 		printf("\n\nEventReader read: %s", fullEvent.logMessage);
 	}
 }
 
-
 int main(int argc, char* argv[]){
-
-	struct addrinfo hints;
-	struct addrinfo* result;
-
-	memset(&hints, 0, sizeof(hints));
-
-	hints.ai_family = AF_INET6;
-	hints.ai_protocol = IPPROTO_TCP;
-	hints.ai_socktype = SOCK_STREAM;
-
-	if(getaddrinfo("localhost", "8081", &hints, &result)!=0){
-		printf("\n\ngetting address failed due to %s", strerror(errno));
-	}
-
-	int sockFD = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-
-	if(connect(sockFD, result->ai_addr, result->ai_addrlen)!=0){
-		printf("\n\nconnecting failed due to %s", strerror(errno));
-	}
-
-	playTradingInterval(sockFD, result, 10);
-
-
+	EventReader er("localhost", "8081");
+	EventCategory ECS[3] =  {"FTE", "WE", "CBA"};
+	er.subscribeToEventCategories(3, ECS);
+	playTradingInterval(er, 10);
 }

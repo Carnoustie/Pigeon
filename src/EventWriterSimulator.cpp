@@ -11,8 +11,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <thread>
-#include "Event.hpp"
-#include "TCPsocket.hpp"
+#include "EventWriter.hpp"
 
 //Financial Trading Event Payload
 struct FTP{
@@ -34,7 +33,7 @@ std::mt19937 randomEngine(19);
 std::normal_distribution<double> gaussian(0,1);
 std::uniform_int_distribution<> uniformSampler(500, 1500);
 
-void playTradingInterval(int recvSockFD, addrinfo* recv){
+void playTradingInterval(EventWriter& ew){
 
 	FTP tradingEvent = {
 		"Citadel Securities",
@@ -50,10 +49,11 @@ void playTradingInterval(int recvSockFD, addrinfo* recv){
 	std::time_t tt = (std::time_t) t;
 	int bytesWritten = strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", std::localtime(&tt));
 	bytesWritten = sprintf(logString, "\n\nAt %s, %s purchased %d units of %s from %s at final execution price $%f", timeString, tradingEvent.buyer, tradingEvent.numUnits, tradingEvent.ticker, tradingEvent.seller, tradingEvent.price);
-	FTE fullEvent;
-	fullEvent.timestamp = t;
-	memcpy(fullEvent.logMessage, logString, sizeof(logString));
-	fullEvent.payload = tradingEvent;
+	Event fullEvent;
+	fullEvent.timeStamp = t;
+	memcpy(fullEvent.logMessage, &logString, sizeof(logString));
+	// fullEvent.payLoad = tradingEvent;
+	memcpy(fullEvent.payLoad, &tradingEvent, sizeof(FTP));
 	int bytesSent;
 	while(1){
 		std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -63,14 +63,20 @@ void playTradingInterval(int recvSockFD, addrinfo* recv){
 		bytesWritten = sprintf(logString, "\n\nAt %s, %s purchased %d units of %s from %s at final execution price $%f", timeString, tradingEvent.buyer, tradingEvent.numUnits, tradingEvent.ticker, tradingEvent.seller, tradingEvent.price);
 		tradingEvent.price = tradingEvent.price + gaussian(randomEngine);
 		tradingEvent.numUnits = uniformSampler(randomEngine);
-		fullEvent.timestamp = t;
-		memcpy(fullEvent.logMessage, logString, sizeof(logString));
-		fullEvent.payload = tradingEvent;
-		bytesSent = sendto(recvSockFD, &fullEvent, sizeof(fullEvent), 0, recv->ai_addr, recv->ai_addrlen);
+		fullEvent.timeStamp = t;
+		memcpy(fullEvent.logMessage, &logString, sizeof(logString));
+		// fullEvent.payLoad = tradingEvent;
+		memcpy(fullEvent.payLoad, &tradingEvent, sizeof(FTP));
+		// printf("\n\nmsg: %s", fullEvent.logMessage);
+		ew.writeEvent(fullEvent);
+		//bytesSent = sendto(recvSockFD, &fullEvent, sizeof(fullEvent), 0, recv->ai_addr, recv->ai_addrlen);
 	}
 }
 
 int main(int argc, char* argv[]){
-	ClientTCPsocket socket("localhost", "8080");
-	playTradingInterval(socket.sockFd, socket.targetAddr);
+	// ClientTCPsocket socket("localhost", "8080");
+	EventWriter ew("localhost", "8080");
+	EventCategory ECS[3] = {"FTE", "WE", "CBA"};
+	ew.announceEventCategories(3, ECS);
+	playTradingInterval(ew);
 }
