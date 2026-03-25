@@ -41,10 +41,11 @@ Experimental - Core features yet to be built. Minimal existing functionality.
   
 
 # Tech stack
-* Programming language - C++
+* Programming language - C++ 20
+  * gcc compiler
 * UNIX Socket API
 
-<img src="assets/cpp.svg" alt="Cpp" width="10%">  &nbsp;&nbsp;&nbsp;  <img src="assets/UNIX.png" alt="Unix" width="18%"> &nbsp;&nbsp;&nbsp;
+<img src="assets/cpp.svg" alt="Cpp" width="10%">  &nbsp;&nbsp;&nbsp;
 
 # How to use
 
@@ -85,15 +86,15 @@ Three source code files, **_EventBrokerSimulator.cpp_**, **_EventWriterSimulator
 ## Using the Event Activity Simulator
 The event activity simulator is used by running the following three commands in order from one terminal each, while standing in the folder _cmd/demo_.
 * In the first terminal, navigate to src/demo, then run
-   _**g++ -o EBS EventBrokerSimulator.cpp**_
+   _**g++ -std=c++20 -o EBS EventBrokerSimulator.cpp**_
   followed by
   _**./EBS**_
 * In the second terminal, navigate to src/demo, then run
-  _**g++ -o EWS EventWriterSimulator.cpp**_
+  _**g++ -std=c++20 -o EWS EventWriterSimulator.cpp**_
   followed by
   _**./EWS**_
 * In the third terminal, navigate to src/demo, then run
-  _**g++ -o ERS EventReaderSimulator.go financialTradingEvent.pb.go \<numEventReaders\>**_
+  _**g++ -std=c++20 -o ERS EventReaderSimulator.go financialTradingEvent.pb.go \<numEventReaders\>**_
   followed by
   _**./ERS**_
 
@@ -101,15 +102,15 @@ A fictional financial trading event type is used for simulation purposes, found 
 
 Example terminal output for EventBroker and EventReader:
 
-<img src="assets/demo_screenshots/brokerDemoLogs.png" alt="gopher" width="100%">
+<img src="assets/PigeonSimulator.png" alt="demoScreenshot" width="100%">
 
 # Dependencies
 Running the Pigeon event broker server as well as the simulator requires present installations of the following softwares:
-* protoc compiler for protobuf
-  * Navigate to [this link](https://protobuf.dev/getting-started/gotutorial/) for installation and tutorial on using protobuf with Go. 
-* Go
-  * This includes a go compiler, the Go standard library, the _go doc_ tool etc.
-  * Navigate to [this link](https://go.dev/doc/install) for guidence on installing Go.
+* gcc compiler version 13.3.0
+  * Compile with -std=C++20
+* Operating System - 24.04.1
+  * For UNIX Socket API support.
+  * The UNIX Socket API has support on all Unix machines, including IOS.
  
 # Why?
 Why do message brokers exist? Why not forego the intermediate layer, and instead send data straight from sender to receiver in a peer-to-peer network? Below are some attempts at answering such questions, found when reflecting upon texts such as those by _Kleppman, 2017_, and _Gorton, 2022_.
