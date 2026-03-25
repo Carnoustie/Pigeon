@@ -44,8 +44,11 @@ Experimental - Core features yet to be built. Minimal existing functionality.
 * Programming language - C++ 20
   * gcc compiler
 * UNIX Socket API
+* Containerization - Docker
 
-<img src="assets/cpp.svg" alt="Cpp" width="15%">  &nbsp;&nbsp;&nbsp;
+
+
+<img src="assets/cpp.svg" alt="Cpp" width="15%">  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <img src="assets/docker.svg" alt="Cpp" width="15%"> 
 
 # How to use
 
@@ -84,8 +87,30 @@ Three source code files, **_EventBrokerSimulator.cpp_**, **_EventWriterSimulator
 * Performing experiments on the Pigeon event broker by exposing it to realistic event activity which is generated at the EventWriter, using stochastic processes where necessary.
 * Demonstrating Pigeon.
 
+A fictional financial trading event type is used for simulation purposes, found in _**src/simulator/FinancialTradingEvent.hpp**_.
+
 ## Using the Event Activity Simulator
-The event activity simulator is used by running the following three commands in order from one terminal each, while standing in the folder _cmd/simulator_.
+
+You can run the Event Activity Simulator in one of two ways:
+1. Docker
+   1. Suitable if you don't run a UNIX-based OS, since the Docker containers do.
+2. Compile and run locally (demands dependencies, see below).
+
+**1.Docker**
+
+To run the Event Activity Simulator with docker compose, execute
+
+_**docker compose -f simulator-compose.yml up**_
+
+while standing in the folder _**src**_. This will
+1. Build three docker images (Broker, Writer, Reader).
+2. Start the Broker first, Writer second, and Reader third.
+
+You should now see event activity logging in the Broker and Reader as they receive fictional financial trading events originating from the writer.
+
+**2. Locally**
+
+The event activity simulator is used locally by running the following three commands in order from one terminal each, while standing in the folder _cmd/simulator_.
 
 * In the first terminal, navigate to src/simulator, then run
 
@@ -106,9 +131,7 @@ The event activity simulator is used by running the following three commands in 
   
   followed by
   
-  _**./../../bin/ERS**_
-
-A fictional financial trading event type is used for simulation purposes, found in _**src/simulator/FinancialTradingEvent.hpp**_. 
+  _**./../../bin/ERS**_ 
 
 Example terminal output for EventBroker and EventReader:
 
