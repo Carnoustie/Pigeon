@@ -17,11 +17,11 @@ class EventWriter{
 		}
 
 		virtual void writeEvent(Event& e){
-			int btsSent = sendto(connection.sockFd, &e, sizeof(Event), 0, connection.targetAddr->ai_addr, connection.targetAddr->ai_addrlen );
+			int btsSent = sendto(connection.getSockFd(), &e, sizeof(Event), 0, connection.getTargetAddr()->ai_addr, connection.getTargetAddr()->ai_addrlen );
 		}
 
 		void announceEventCategories(int numEventCategories, EventCategory* EventCategories){
-			int btsSent = sendto(connection.sockFd, &numEventCategories, sizeof(int), 0, connection.targetAddr->ai_addr, connection.targetAddr->ai_addrlen);
-			btsSent = sendto(connection.sockFd, EventCategories, sizeof(EventCategory[numEventCategories]), 0, connection.targetAddr->ai_addr, connection.targetAddr->ai_addrlen);
+			int btsSent = sendto(connection.getSockFd(), &numEventCategories, sizeof(int), 0, connection.getTargetAddr()->ai_addr, connection.getTargetAddr()->ai_addrlen);
+			btsSent = sendto(connection.getSockFd(), EventCategories, sizeof(EventCategory[numEventCategories]), 0, connection.getTargetAddr()->ai_addr, connection.getTargetAddr()->ai_addrlen);
 		}
 };

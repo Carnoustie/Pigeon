@@ -22,7 +22,6 @@ typedef char EvtCatRawBytes[32];
 
 struct conn{
 	std::vector<std::queue<Event>*> wrtrQueues;
-	int qId;
 	int sock;
 	sockaddr_storage* clientAddr;
 	socklen_t* clientAddrLen;
@@ -129,19 +128,16 @@ class EventBroker{
 				while(connPool->connectedWriters<=connPool->maxEventWriterConnections){
 					struct sockaddr_storage clientAddr;
 					socklen_t clientAddrLen = (socklen_t) sizeof(clientAddr);
-					if((connSockFd=accept(connPool->TCPsock.sockFd, (struct sockaddr*) &clientAddr, &clientAddrLen))<0){
+					if((connSockFd=accept(connPool->TCPsock.getSockFd(), (struct sockaddr*) &clientAddr, &clientAddrLen))<0){
 						std::string msg = (std::string) strerror(errno);
 						throw std::runtime_error(msg);
 					}else{
 
 						int numCats;
-						int sizeOfIncomingCatStrings = sizeof(EvtCat)*numCats;
 						int readCatBytes = recvfrom(connSockFd, &numCats, sizeof(int), 0, (sockaddr*) &clientAddr, &clientAddrLen);
 						EvtCatRawBytes tcpEventCats[numCats];
 						readCatBytes = recvfrom(connSockFd, &tcpEventCats, sizeof(tcpEventCats), 0, (sockaddr*) &clientAddr, &clientAddrLen);
-
 						std::vector<std::queue<Event>*> EventVector;
-
 						for(int i=0; i<numCats; i++){
 							std::string strCategory = (std::string) tcpEventCats[i];
 							(*connPool->evtQueues)[strCategory] = std::queue<Event>();
@@ -151,7 +147,6 @@ class EventBroker{
 
 						conn c =  {
 							EventVector,
-							connPool->connectedWriters,
 							connSockFd,
 							&clientAddr,
 							&clientAddrLen
@@ -200,18 +195,15 @@ class EventBroker{
 				while(connPool->connectedReaders<=connPool->maxEventReaderConnections){
 					struct sockaddr_storage clientAddr;
 					socklen_t clientAddrLen = (socklen_t) sizeof(clientAddr);
-					if((connSockFd=accept(connPool->TCPsock.sockFd, (struct sockaddr*) &clientAddr, &clientAddrLen))<0){
+					if((connSockFd=accept(connPool->TCPsock.getSockFd(), (struct sockaddr*) &clientAddr, &clientAddrLen))<0){
 						std::string msg = (std::string) strerror(errno);
 						throw std::runtime_error(msg);
 					}else{
 						int numCats;
-						int sizeOfIncomingCatStrings = sizeof(EvtCat)*numCats;
 						int readCatBytes = recvfrom(connSockFd, &numCats, sizeof(int), 0, (sockaddr*) &clientAddr, &clientAddrLen);
 						EvtCatRawBytes tcpEventCats[numCats];
 						readCatBytes = recvfrom(connSockFd, &tcpEventCats, sizeof(tcpEventCats), 0, (sockaddr*) &clientAddr, &clientAddrLen);
-
 						std::vector<std::queue<Event>*> EventVector;
-
 						for(int i=0; i<numCats; i++){
 							std::string strCategory = (std::string) tcpEventCats[i];
 							(*connPool->evtQueues)[strCategory] = std::queue<Event>();
@@ -221,7 +213,6 @@ class EventBroker{
 
 						conn c =  {
 							EventVector,
-							connPool->connectedReaders,
 							connSockFd,
 							&clientAddr,
 							&clientAddrLen
