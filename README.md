@@ -110,7 +110,7 @@ You should now see event activity logging in the Broker and Reader as they recei
 
 **2. Locally**
 
-The event activity simulator is used locally by running the following three commands in order from one terminal each, while standing in the folder _cmd/simulator_.
+The event activity simulator is used locally by running the following three commands in order from one terminal each, while standing in the folder _src/simulator_.
 
 * In the first terminal, navigate to src/simulator, then run
 
@@ -143,7 +143,7 @@ Running the Pigeon event broker server as well as the simulator requires present
   * Compile with -std=C++20
 * Operating System - Ubuntu 24.04.1
   * For UNIX Socket API support.
-  * The UNIX Socket API has support on all Unix machines, including iOS.
+  * The UNIX Socket API has support on all Unix machines, including macOS.
  
 # Why?
 Why do message brokers exist? Why not forego the intermediate layer, and instead send data straight from sender to receiver in a peer-to-peer network? Below are some attempts at answering such questions, found when reflecting upon texts such as those by _Kleppman, 2017_, and _Gorton, 2022_.
