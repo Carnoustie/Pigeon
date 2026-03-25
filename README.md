@@ -1,9 +1,9 @@
-<img src="Pigeon.png" alt="gopher" width="40%">
+<img src="assets/Pigeon.png" alt="Pigeon" width="40%">
 
 # What it is
 Message broker for event-driven software systems.
 
-The goal of this project is **not** to build a serious substitute to Kafka, but rather to learn what engineering constraints emerge when building a message broker from scratch. This activity should yield insights about the inner workings of Kafka and other message brokers. Much of the architecture is drawn from that of Kafka, but then implemented in Go.
+The goal of this project is **not** to build a serious substitute to Kafka, but rather to learn what engineering constraints emerge when building a message broker from scratch. This activity should yield insights about the inner workings of Kafka and other message brokers. Much of the architecture is drawn from that of Kafka, but then implemented in C++.
 
 # Status
 Experimental - Core features yet to be built. Minimal existing functionality.
@@ -14,49 +14,54 @@ Experimental - Core features yet to be built. Minimal existing functionality.
 * **Event Activity simulator**
   * Event activity simulator propagating fictional financial trading events from EventWriter(s) -> Event Broker (EventQueue(s)) -> EventReader(s)
   * See the section named _Event Activity Simulator_ below
-* **Typed event schemas (protobuf)**
-  * Example event types defined using protocol buffers and compiled into Go code (using the _**protoc**_ compiler).
+* **Binary communication protocol for Events transmitted over TCP**
+  * Structural encoding in EventBroker.
+  * See documentation/Protocol.md for more details.
+* **Event Category Partitions**
+  * Analogous to Kafka topics.
+  * EventWriters/EventReaders announce to the EventBroker the set of EventCategories they write/subscribe to/from, following their TCP handshake that establishes network communication.
 * **Architecture and design records**
   * Exploratory architecture diagrams and written design notes capturing the current structure of the system and the design questions being investigated.
-  * These are intentially included early in order to make the architectural reasoning transparent, even as the implementation is evolving.
+  * These are intentionally included early in order to make the architectural reasoning transparent, even as the implementation is evolving.
 
 ## What does not exist today
 * **Log-based event brokerage.**
-  * Established systems such as Kafka use space locality on the disk as an append-only log to achieve an attractive combination of performance and resilliance (Kleppmann, 2017). In contrast, Pigeons' in-flight events are currently held in queues in memory. This means that events are lost in case of broker failure, in constrast to Kafka where events are persisted on disk.
+  * Established systems such as Kafka use space locality on the disk as an append-only log to achieve an attractive combination of performance and resilliance (Kleppmann, 2017). In contrast, Pigeons' in-flight events are currently held in queues in memory. This means that events are lost in case of broker failure, in contrast to Kafka where events are persisted on disk.
 * **No sharding of EventQueue categories.**
-    * Kafkauesque partitioning of topics across their storage areas, is currently missing.
+    * Kafkauesque partitioning of EventCategories across their storage areas is currently missing.
 * **Delivery guarantuees.**
   * Pigeon currently offers no excactly-once or other delivery guarantuees for written events.
   * Pigeon is currently susceptible to possible losses or duplication of events in case of various errors such as network glitches or other failures.
 * **Event Replay (recovery)**
-  * Pigeon currently offers no recovery mechanism from system disaster by replaying events that were in-flight at time of failure.
+  * Pigeon currently offers no recovery mechanism from system disaster by replaying events that were in-flight at the time of failure.
 * **Horizontal scaling logic**
-  * Pigeon currently has no support for scaling/replicating event brokers to adapt bandwidth under variable throughput load, beyond what could be offered by default in Kubernetes deployments that respond to variable network traffic in/out from event broker(s).
+  * Pigeon currently has no support for scaling/replicating event brokers to up/down-scale bandwidth under variable throughput load, beyond what could be offered by default in Kubernetes deployments that respond to variable network traffic in/out from event broker(s).
 * **Performance tuning**
   * No deliberate performance tuning or benchmarking has been done yet.
   
 
 # Tech stack
-* Programming language - Go
-* Message encoding - Protocol Buffer (Protobuf)
+* Programming language - C++
+* UNIX Socket API
 
-<img src="assets/gopher.svg" alt="gopher" width="10%">  &nbsp;&nbsp;&nbsp;  <img src="assets/golang.svg" alt="golang" width="10%"> &nbsp;&nbsp;&nbsp;   <img src="assets/protobuf.png" alt="protobuf" width="25%">  &nbsp;&nbsp;&nbsp;
+<img src="assets/cpp.svg" alt="Cpp" width="10%">  &nbsp;&nbsp;&nbsp;  <img src="assets/UNIX.png" alt="Unix" width="18%"> &nbsp;&nbsp;&nbsp;
 
 # How to use
 
 Using Pigeon amounts to
 
-* Implementing the Pigeon Go interfaces _EventWriter_ and _EventReader_ in your own code to define readers and writers that are sensible for your use case. Mapping EventQueues to EventReaders and EventWriters is part of adhering to the interfaces. Then insert event writes at relevant points in your application.
-* Writing a file with naming extension _.proto_ that specifies the event types relevant for your application.
-* Invoking the compiler _protoc_ on aforementioned file, to generate Go code supporting the encoding of said objects.
-* Configure targets and subscriptions for EventWriters and EventReaders respectively.
-  * As mentioned above, such configuration are not yet supported in Pigeon. To be updated.
+* Defining custom event structures as raw C-structs.
+  * These must adhere to the struct Event, found in Event.hpp.
+  * EventWriters and EventReaders that share a given EventCategory must agree upon the custom Event format, so that data is preserved in-flight.
+  * See example in src/FinancialTradingEvent.hpp.
+* Specify and announce targets and subscriptions for EventWriters and EventReaders respectively.
+  * See EventWriter::announceEventCategories(2) and EventReader::subscribeToEventCategories(2)
+* Embedding EventWriter and EventReader objects in your C++ code. Insert Event writes and Event reads at relevant points in your application. 
 * Deploying the Pigeon event broker server alongside your existing microservices, including those now containing the EventWriters and EventReaders.
 * The deployed Pigeon event broker now processes events in (near) real-time, meaning that the EventQueues residing in the Pigeon event broker receives messages from EventWriters, and propagates them onto subsribing EventReaders.
 
 # Architecture
 To be continously modified.
-<img src="documentation/Architecture_diagram.svg" alt="gopher" width="100%">
 
 ## Engineering Problems
 This section delineates some (but certainly not all) engineering problems and tradeoffs which are adressed by a desirable event broker design.
@@ -73,24 +78,28 @@ And more.
 
 # Event Activity Simulator
 
-Three programs, **_EventBrokerSimulator.go_**, **_WriterSimulator.go_**, and **_ReaderSimulator.go_** together make up an **_event activity simulator_** as part of the Pigeon Project. Its purpose is twofold:
+Three source code files, **_EventBrokerSimulator.cpp_**, **_EventWriterSimulator.cpp_**, and **_EventReaderSimulator.go_** together make up an **_event activity simulator_** as part of the Pigeon Project. Its purpose is twofold:
 * Performing experiments on the Pigeon event broker by exposing it to realistic event activity which is generated at the EventWriter, using stochastic processes where necessary.
 * Demonstrating Pigeon.
 
 ## Using the Event Activity Simulator
 The event activity simulator is used by running the following three commands in order from one terminal each, while standing in the folder _cmd/demo_.
-* In the first terminal, navigate to cmd/demo, then run
-   _**go run EventBrokerSimulator.go financialTradingEvent.pb.go \<numEventQueues\>**_
-* In the second terminal, navigate to cmd/demo, then run
-  _**go run WriterSimulator.go financialTradingEvent.pb.go \<numEventWriters\>**_
-* In the third terminal, navigate to cmd/demo, then run
-  _**go run ReaderSimulator.go financialTradingEvent.pb.go \<numEventReaders\>**_
+* In the first terminal, navigate to src/demo, then run
+   _**g++ -o EBS EventBrokerSimulator.cpp**_
+  followed by
+  _**./EBS**_
+* In the second terminal, navigate to src/demo, then run
+  _**g++ -o EWS EventWriterSimulator.cpp**_
+  followed by
+  _**./EWS**_
+* In the third terminal, navigate to src/demo, then run
+  _**g++ -o ERS EventReaderSimulator.go financialTradingEvent.pb.go \<numEventReaders\>**_
+  followed by
+  _**./ERS**_
 
-Replace **_\<numEventQueues\>_**, **_\<numEventWriters\>_**, and **\<numEventReaders\>** with the numbers desired for your simulation.
+A fictional financial trading event type is used for simulation purposes, found in _**FinancialTradingEvent.hpp**_. 
 
-The file _financialTradingEvent.pb.go_ stems from the protobuf template in _financialTradingEvent.proto_, which was compiled into _financialTradingEvent.pb.go_ by the compiler _protoc_. A fictional financial trading event type is used for simulation purposes. 
-
-Example terminal outbut when running EventBrokerSimulator.go:
+Example terminal output for EventBroker and EventReader:
 
 <img src="assets/demo_screenshots/brokerDemoLogs.png" alt="gopher" width="100%">
 
