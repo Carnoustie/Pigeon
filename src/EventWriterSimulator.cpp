@@ -13,7 +13,7 @@
 #include "EventWriter.hpp"
 #include "FinancialTradingEvent.hpp"
 
-std::mt19937 randomEngine(19);
+std::mt19937 randomEngine(15);
 std::normal_distribution<double> gaussian(0,1);
 std::uniform_int_distribution<> uniformSampler(500, 1500);
 
