@@ -1,0 +1,5 @@
+FROM gcc:13.3
+COPY . /usr/src
+WORKDIR /usr/src/simulator
+RUN g++ -std=c++20 -o EWS -I.. EventWriterSimulator.cpp
+CMD ["./EWS"]

@@ -1,0 +1,33 @@
+name: pigeon-simulator
+
+services:
+  broker:
+    build:
+      context: .
+      dockerfile: Dockerfile.eventBrokerSimulator
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8080"]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+  writer:
+    build:
+      context: .
+      dockerfile: Dockerfile.eventWriterSimulator
+    environment:
+      - BROKER_HOST=broker
+    depends_on:
+      broker:
+        condition: service_healthy
+  reader:
+    build:
+      context: .
+      dockerfile: Dockerfile.eventReaderSimulator
+    environment:
+      - BROKER_HOST=broker
+    depends_on:
+      broker:
+        condition: service_healthy
+networks:
+  default:
+    enable_ipv6: true

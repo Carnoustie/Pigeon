@@ -1,5 +1,6 @@
 #include <cerrno>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -19,7 +20,8 @@ void playTradingInterval(EventReader& er, int intervalInSeconds){
 }
 
 int main(int argc, char* argv[]){
-	EventReader er("localhost", "8081");
+	const char* host = getenv("BROKER_HOST") ? getenv("BROKER_HOST") : "localhost";
+	EventReader er(host, "8081");
 	EventCategory ECS[3] =  {"FTE", "WE", "CBA"};
 	er.subscribeToEventCategories(3, ECS);
 	playTradingInterval(er, 10);

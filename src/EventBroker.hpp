@@ -114,11 +114,13 @@ class EventBroker{
 			int readBytes;
 			while(1){
 				readBytes = recv(c->sock, &e, sizeof(Event), 0);
+				if(readBytes<=0){break;}
 				printf("\n\n\nEventBroker received: %s\n\n", e.logMessage);
 				for(std::queue<Event>* q: c->wrtrQueues){
 					q->push(e);
 				}
 			}
+			return nullptr;
 		}
 
 		static void* AccptEvtWriters(void* arg){

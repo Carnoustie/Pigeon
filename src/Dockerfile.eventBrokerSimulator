@@ -1,0 +1,6 @@
+FROM gcc:13.3
+COPY . /usr/src
+WORKDIR /usr/src/simulator
+RUN apt-get update && apt-get install -y netcat-openbsd
+RUN g++ -std=c++20 -o EBS -I.. EventBrokerSimulator.cpp
+CMD ["./EBS"]

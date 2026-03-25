@@ -86,6 +86,7 @@ class ServerTCPsocket{
 			hints.ai_family = AF_INET6;
 			hints.ai_protocol = IPPROTO_TCP;
 			hints.ai_socktype = SOCK_STREAM;
+			hints.ai_flags = AI_PASSIVE;
 			if(getaddrinfo(NULL, serverPort, &hints, &serverAddr)!=0){
 				std::string msg = "\n\ngetaddrinfo failed due to " + (std::string) strerror(errno);
 				throw std::runtime_error(msg);

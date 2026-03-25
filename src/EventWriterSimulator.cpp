@@ -54,8 +54,7 @@ void playTradingInterval(EventWriter& ew){
 }
 
 int main(int argc, char* argv[]){
-	const char* host = getenv("BROKER_HOST") ? getenv("BROKER_HOST") : "localhost";
-	EventWriter ew(host, "8080");
+	EventWriter ew("localhost", "8080");
 	EventCategory ECS[3] = {"FTE", "WE", "CBA"};
 	ew.announceEventCategories(3, ECS);
 	playTradingInterval(ew);
