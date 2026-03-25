@@ -45,7 +45,7 @@ Experimental - Core features yet to be built. Minimal existing functionality.
   * gcc compiler
 * UNIX Socket API
 
-<img src="assets/cpp.svg" alt="Cpp" width="10%">  &nbsp;&nbsp;&nbsp;
+<img src="assets/cpp.svg" alt="Cpp" width="15%">  &nbsp;&nbsp;&nbsp;
 
 # How to use
 
