@@ -62,7 +62,8 @@ Using Pigeon amounts to
 * The deployed Pigeon event broker now processes events in (near) real-time, meaning that the EventQueues residing in the Pigeon event broker receives messages from EventWriters, and propagates them onto subsribing EventReaders.
 
 # Architecture
-To be continously modified.
+<img src="documentation/Architecture_diagram.png" alt="Architecture" width="100%">
+Architectural diagrams are continously modified to reflect changes.
 
 ## Engineering Problems
 This section delineates some (but certainly not all) engineering problems and tradeoffs which are adressed by a desirable event broker design.
@@ -108,9 +109,9 @@ Example terminal output for EventBroker and EventReader:
 Running the Pigeon event broker server as well as the simulator requires present installations of the following softwares:
 * gcc compiler version 13.3.0
   * Compile with -std=C++20
-* Operating System - 24.04.1
+* Operating System - Ubuntu 24.04.1
   * For UNIX Socket API support.
-  * The UNIX Socket API has support on all Unix machines, including IOS.
+  * The UNIX Socket API has support on all Unix machines, including iOS.
  
 # Why?
 Why do message brokers exist? Why not forego the intermediate layer, and instead send data straight from sender to receiver in a peer-to-peer network? Below are some attempts at answering such questions, found when reflecting upon texts such as those by _Kleppman, 2017_, and _Gorton, 2022_.
