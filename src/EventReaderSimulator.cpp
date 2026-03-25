@@ -15,7 +15,6 @@ void playTradingInterval(EventReader& er, int intervalInSeconds){
 
 	while(1){
 		er.readEvent();
-		printf("\n\nEventReader read: %s", fullEvent.logMessage);
 	}
 }
 

@@ -113,7 +113,7 @@ class EventBroker{
 			Event e;
 			int readBytes;
 			while(1){
-				readBytes = recvfrom(c->sock, &e, sizeof(Event), 0, (sockaddr*) c->clientAddr, c->clientAddrLen);
+				readBytes = recv(c->sock, &e, sizeof(Event), 0);
 				printf("\n\n\nEventBroker received: %s\n\n", e.logMessage);
 				for(std::queue<Event>* q: c->wrtrQueues){
 					q->push(e);
@@ -134,9 +134,9 @@ class EventBroker{
 					}else{
 
 						int numCats;
-						int readCatBytes = recvfrom(connSockFd, &numCats, sizeof(int), 0, (sockaddr*) &clientAddr, &clientAddrLen);
+						int readCatBytes = recv(connSockFd, &numCats, sizeof(int), 0);
 						EvtCatRawBytes tcpEventCats[numCats];
-						readCatBytes = recvfrom(connSockFd, &tcpEventCats, sizeof(tcpEventCats), 0, (sockaddr*) &clientAddr, &clientAddrLen);
+						readCatBytes = recv(connSockFd, &tcpEventCats, sizeof(tcpEventCats), 0);
 						std::vector<std::queue<Event>*> EventVector;
 						for(int i=0; i<numCats; i++){
 							std::string strCategory = (std::string) tcpEventCats[i];
@@ -182,7 +182,7 @@ class EventBroker{
 						e = q->front();
 						q->pop();
 						std::this_thread::sleep_for(std::chrono::seconds(1));
-						bytesWritten = sendto(c->sock, &e, sizeof(Event), 0, (sockaddr*) c->clientAddr, *c->clientAddrLen);
+						bytesWritten = send(c->sock, &e, sizeof(Event), 0);
 					}
 				}
 			}
@@ -200,9 +200,9 @@ class EventBroker{
 						throw std::runtime_error(msg);
 					}else{
 						int numCats;
-						int readCatBytes = recvfrom(connSockFd, &numCats, sizeof(int), 0, (sockaddr*) &clientAddr, &clientAddrLen);
+						int readCatBytes = recv(connSockFd, &numCats, sizeof(int), 0);
 						EvtCatRawBytes tcpEventCats[numCats];
-						readCatBytes = recvfrom(connSockFd, &tcpEventCats, sizeof(tcpEventCats), 0, (sockaddr*) &clientAddr, &clientAddrLen);
+						readCatBytes = recv(connSockFd, &tcpEventCats, sizeof(tcpEventCats), 0);
 						std::vector<std::queue<Event>*> EventVector;
 						for(int i=0; i<numCats; i++){
 							std::string strCategory = (std::string) tcpEventCats[i];

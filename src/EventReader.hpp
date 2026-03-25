@@ -19,12 +19,12 @@ class EventReader{
 
 		virtual void readEvent(){
 			Event e;
-			int btsSent = recvfrom(connection.getSockFd(), &e, sizeof(Event), 0, connection.getTargetAddr()->ai_addr, &connection.getTargetAddr()->ai_addrlen );
+			int btsSent = recv(connection.getSockFd(), &e, sizeof(Event), 0);
 			printf("\n\nEventReader just read event: %s", e.logMessage);
 		}
 
 		void subscribeToEventCategories(int numEventCategories, EventCategory EventCategories[10]){
-			int btsSent = sendto(connection.getSockFd(), &numEventCategories, sizeof(int), 0, connection.getTargetAddr()->ai_addr, connection.getTargetAddr()->ai_addrlen);
-			btsSent = sendto(connection.getSockFd(), EventCategories, sizeof(EventCategory[numEventCategories]), 0, connection.getTargetAddr()->ai_addr, connection.getTargetAddr()->ai_addrlen);
+			int btsSent = send(connection.getSockFd(), &numEventCategories, sizeof(int), 0);
+			btsSent = send(connection.getSockFd(), EventCategories, sizeof(EventCategory[numEventCategories]), 0);
 		}
 };
