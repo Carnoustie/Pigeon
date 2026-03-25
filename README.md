@@ -85,19 +85,27 @@ Three source code files, **_EventBrokerSimulator.cpp_**, **_EventWriterSimulator
 * Demonstrating Pigeon.
 
 ## Using the Event Activity Simulator
-The event activity simulator is used by running the following three commands in order from one terminal each, while standing in the folder _cmd/demo_.
+The event activity simulator is used by running the following three commands in order from one terminal each, while standing in the folder _cmd/simulator_.
 * In the first terminal, navigate to src/demo, then run
-   _**g++ -std=c++20 -o EBS EventBrokerSimulator.cpp**_
+
+   _**g++ -std=c++20 -o ../../bin/EBS -I.. EventBrokerSimulator.cpp**_
+
   followed by
-  _**./EBS**_
+  
+  _**./../../bin/EBS**_
 * In the second terminal, navigate to src/demo, then run
-  _**g++ -std=c++20 -o EWS EventWriterSimulator.cpp**_
+  
+  _**g++ -std=c++20 -o ../../bin/EWS -I.. EventWriterSimulator.cpp**_
   followed by
-  _**./EWS**_
+  
+  _**./../../bin/EWS**_
 * In the third terminal, navigate to src/demo, then run
-  _**g++ -std=c++20 -o ERS EventReaderSimulator.go financialTradingEvent.pb.go \<numEventReaders\>**_
+  
+  _**g++ -std=c++20 -o ../../bin/ERS -I.. EventReaderSimulator.cpp**_
+  
   followed by
-  _**./ERS**_
+  
+  _**./../../bin/ERS**_
 
 A fictional financial trading event type is used for simulation purposes, found in _**FinancialTradingEvent.hpp**_. 
 
