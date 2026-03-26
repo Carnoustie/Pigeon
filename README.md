@@ -155,10 +155,10 @@ Why do message brokers exist? Why not forego the intermediate layer, and instead
   * Decoupling of teams working on different reader/writer microservices.
   * Microservices become liberated from their mutal dependencies, reducing coordination costs in updates and changes.
 * **Resillience**
-  *  Message brokers buffers failures between reader/writers, allowing the other side to stay operational.
+  *  Message brokers buffer failures between reader/writers, allowing the other side to stay operational if either of them fail in production.
     * For log-based message brokers such as Kafka, additional resilience is gained by virtue of using the (persistent) disk as the event write destination.
-  * The broker acts as a record of written events enabling **_replay_** of lost messages in failure scenarios.
+  * The broker acts as a record of written events, enabling **_replay_** of lost messages in failure scenarios.
 * **Insight extraction (Business)**:
   * Using the broker to categorize system events can support data analytics and ML pipelines.
 * **Scalability**
-  * The broker can, if designed to buffer differentials in read/write throughputs, decouple horizontal scaling of event readers and event writers. Coupling writers to readers with direct network communication demand that they scale in sync - not always cost-optimal in a Kubernetes cluster when readers and writers put varying demands on the system as a whole. For example, a single event writer might write events that will be read by 100 subscribing event readers. Then you get a differential of 1/100, and a one-one scaling of writers/readers would be immensely wasteful. An event broker handling the fan-out is much more (cost) effective.
+  * The broker can, if designed to buffer differentials in read/write throughputs, decouple horizontal scaling of event readers and event writers. Coupling writers to readers with direct network communication demands that they scale in sync - not always cost-optimal in a Kubernetes cluster when readers and writers put varying demands on the system as a whole. For example, a single event writer might write events that will be read by 100 subscribing event readers. Then you get a differential of 1/100 in write/read load, and a one-to-one scaling of writers/readers would be immensely wasteful. An event broker handling the fan-out is much more (cost) effective.
