@@ -6,7 +6,7 @@ Message broker for event-driven software systems.
 The goal of this project is **not** to build a serious substitute to Kafka, but rather to learn what engineering constraints emerge when building a message broker from scratch. This activity should yield insights about the inner workings of Kafka and other message brokers. Much of the architecture is drawn from that of Kafka, but then implemented in C++.
 
 # Status
-Experimental - Core features yet to be built. Minimal existing functionality.
+Experimental - Existing functionality with modifications remaining before production-ready.
 
 ## What exists today
 * **Core event broker skeleton**
