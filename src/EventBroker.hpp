@@ -21,7 +21,7 @@ typedef std::string EvtCat;
 typedef char EvtCatRawBytes[32];
 
 struct conn{
-	std::vector<std::queue<Event>*> wrtrQueues;
+	std::vector<std::queue<Event>*> evtQueues;
 	int sock;
 	sockaddr_storage* clientAddr;
 	socklen_t* clientAddrLen;
@@ -46,6 +46,7 @@ struct wrtrsPool{
 struct rdrsPool{
 	ServerTCPsocket TCPsock;
 	std::vector<connHandle> connHandles;
+	std::unordered_map<EvtCat, std::vector<conn*>> subscribers;
 	int maxEventReaderConnections;
 	pthread_t rootThread;
 	int connectedReaders;
@@ -88,6 +89,7 @@ class EventBroker{
 			
 			evtRdrsBdry.TCPsock = ServerTCPsocket(evtRdrsPort, maxReaders);
 			evtRdrsBdry.connHandles = std::vector<connHandle>(maxReaders);
+			evtRdrsBdry.subscribers = std::unordered_map<EvtCat, std::vector<conn*>>();
 			evtRdrsBdry.maxEventReaderConnections = maxReaders;
 			evtRdrsBdry.connectedReaders = 0;
 			evtRdrsBdry.evtQueues = evtQueues;
@@ -116,7 +118,7 @@ class EventBroker{
 				readBytes = recv(c->sock, &e, sizeof(Event), 0);
 				if(readBytes<=0){break;}
 				printf("\n\n\nEventBroker received: %s\n\n", e.logMessage);
-				for(std::queue<Event>* q: c->wrtrQueues){
+				for(std::queue<Event>* q: c->evtQueues){
 					q->push(e);
 				}
 			}
@@ -139,20 +141,21 @@ class EventBroker{
 						int readCatBytes = recv(connSockFd, &numCats, sizeof(int), 0);
 						EvtCatRawBytes tcpEventCats[numCats];
 						readCatBytes = recv(connSockFd, &tcpEventCats, sizeof(tcpEventCats), 0);
-						std::vector<std::queue<Event>*> EventVector;
-						for(int i=0; i<numCats; i++){
-							std::string strCategory = (std::string) tcpEventCats[i];
-							(*connPool->evtQueues)[strCategory] = std::queue<Event>();
-							EventVector.push_back(&(*connPool->evtQueues)[strCategory]);
-							std::cout << "\n\nEventWriter announced a new EventCategory named: " << strCategory;
-						}
-
+						std::vector<std::queue<Event>*> EventQs;
 						conn c =  {
-							EventVector,
+							EventQs,
 							connSockFd,
 							&clientAddr,
 							&clientAddrLen
 						};
+						for(int i=0; i<numCats; i++){
+							std::string strCategory = (std::string) tcpEventCats[i];
+							(*connPool->evtQueues)[strCategory] = std::queue<Event>();
+							c.evtQueues.push_back(&(*connPool->evtQueues)[strCategory]);
+							std::cout << "\n\nEventWriter announced a new EventCategory named: " << strCategory;
+						}
+						
+
 						pthread_t tid;
 						std::unique_ptr<conn> cPtr{new conn{c}};
 						pthread_create(&tid, NULL, handleEventWriter, cPtr.get());
@@ -178,7 +181,7 @@ class EventBroker{
 			int bytesWritten;
 			Event e;
 			while(1){
-				for(std::queue<Event>* q: c->wrtrQueues){
+				for(std::queue<Event>* q: c->evtQueues){
 					std::this_thread::sleep_for(std::chrono::seconds(1));
 					if(!q->empty()){
 						e = q->front();
@@ -205,23 +208,22 @@ class EventBroker{
 						int readCatBytes = recv(connSockFd, &numCats, sizeof(int), 0);
 						EvtCatRawBytes tcpEventCats[numCats];
 						readCatBytes = recv(connSockFd, &tcpEventCats, sizeof(tcpEventCats), 0);
-						std::vector<std::queue<Event>*> EventVector;
-						for(int i=0; i<numCats; i++){
-							std::string strCategory = (std::string) tcpEventCats[i];
-							(*connPool->evtQueues)[strCategory] = std::queue<Event>();
-							EventVector.push_back(&(*connPool->evtQueues)[strCategory]);
-							std::cout << "\n\nEventReader announced subsription to the EventCategory named: " << strCategory;
-						}
-
+						std::vector<std::queue<Event>*> EventQs;
 						conn c =  {
-							EventVector,
+							EventQs,
 							connSockFd,
 							&clientAddr,
 							&clientAddrLen
 						};
-
-						pthread_t tid;
 						std::unique_ptr<conn> cPtr{new conn{c}};
+						for(int i=0; i<numCats; i++){
+							std::string strCategory = (std::string) tcpEventCats[i];
+							(*connPool->evtQueues)[strCategory] = std::queue<Event>();
+							cPtr->evtQueues.push_back(&(*connPool->evtQueues)[strCategory]);
+							connPool->subscribers[strCategory].push_back(cPtr.get());
+							std::cout << "\n\nEventReader announced subsription to the EventCategory named: " << strCategory;
+						}
+						pthread_t tid;
 						pthread_create(&tid, NULL, handleEventReader, cPtr.get());
 						connHandle ch = {
 							std::move(cPtr),
