@@ -46,7 +46,7 @@ struct wrtrsPool{
 struct rdrsPool{
 	ServerTCPsocket TCPsock;
 	std::vector<connHandle> connHandles;
-	std::unordered_map<EvtCat, std::vector<conn*>> subscribers;
+//	std::unordered_map<EvtCat, std::vector<conn*>> subscribers;
 	int maxEventReaderConnections;
 	pthread_t rootThread;
 	int connectedReaders;
@@ -54,10 +54,14 @@ struct rdrsPool{
 	int numEvtQueues;
 };
 
+
+
 class EventBroker{
 	private:
 		const char* evtWrtrsPort = "8080";
 		const char* evtRdrsPort = "8081";
+
+		std::unordered_map<EvtCat, std::vector<conn*>> subscribers;
 	
 	public:
 		wrtrsPool evtWrtrsBdry;
@@ -89,7 +93,7 @@ class EventBroker{
 			
 			evtRdrsBdry.TCPsock = ServerTCPsocket(evtRdrsPort, maxReaders);
 			evtRdrsBdry.connHandles = std::vector<connHandle>(maxReaders);
-			evtRdrsBdry.subscribers = std::unordered_map<EvtCat, std::vector<conn*>>();
+			//evtRdrsBdry.subscribers = std::unordered_map<EvtCat, std::vector<conn*>>();
 			evtRdrsBdry.maxEventReaderConnections = maxReaders;
 			evtRdrsBdry.connectedReaders = 0;
 			evtRdrsBdry.evtQueues = evtQueues;
@@ -220,7 +224,8 @@ class EventBroker{
 							std::string strCategory = (std::string) tcpEventCats[i];
 							(*connPool->evtQueues)[strCategory] = std::queue<Event>();
 							cPtr->evtQueues.push_back(&(*connPool->evtQueues)[strCategory]);
-							connPool->subscribers[strCategory].push_back(cPtr.get());
+							//connPool->subscribers[strCategory].push_back(cPtr.get());
+							subscribers[strCategory].push_back(cPtr.get());
 							std::cout << "\n\nEventReader announced subsription to the EventCategory named: " << strCategory;
 						}
 						pthread_t tid;
